@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-in-One Crypto Tool</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // Apply theme from localStorage on initial load
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+    <style>
+        /* Custom styles for a better look and feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            transition: background-color 0.3s ease;
+        }
+        .dark body {
+            background-color: #111827; /* Gray-900 */
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+        }
+        .tab-button.active {
+            border-bottom-color: #3b82f6; /* Blue-500 */
+            color: #1e3a8a; /* Blue-900 */
+        }
+        .dark .tab-button.active {
+            color: #60a5fa; /* Blue-400 */
+        }
+        .tab-button:hover:not(.active) {
+            background-color: #e5e7eb; /* Gray-200 */
+        }
+        .dark .tab-button:hover:not(.active) {
+            background-color: #374151; /* Gray-700 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 2rem;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .dark .card {
+            background-color: #1f2937; /* Gray-800 */
+            border: 1px solid #374151; /* Gray-700 */
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: #fff;
+            color: #111827;
+            transition: border-color 0.2s, box-shadow 0.2s, background-color 0.3s, color 0.3s;
+        }
+        .dark .form-input, .dark .form-textarea, .dark .form-select {
+            background-color: #374151; /* Gray-700 */
+            border-color: #4b5563; /* Gray-600 */
+            color: #f3f4f6; /* Gray-100 */
+        }
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+        }
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .output-box, .password-box {
+            position: relative;
+        }
+        .copy-btn, .visibility-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: transparent;
+            border: none;
+            padding: 0.5rem;
+            cursor: pointer;
+        }
+        .copy-btn {
+            top: 0.5rem;
+            right: 0.5rem;
+            transform: none;
+            background-color: #f9fafb;
+            border: 1px solid #d1d5db;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            color: #4b5563;
+            transition: background-color 0.2s;
+        }
+        .dark .copy-btn {
+            background-color: #374151;
+            border-color: #4b5563;
+            color: #d1d5db;
+        }
+        .copy-btn:hover {
+            background-color: #f3f4f6;
+        }
+        .dark .copy-btn:hover {
+            background-color: #4b5563;
+        }
+        .visibility-btn {
+            right: 0.25rem;
+        }
+        .visibility-btn svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #6b7280;
+        }
+        .dark .visibility-btn svg {
+            color: #9ca3af;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border-left-color: #fff;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-8 relative">
+            <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">All-in-One Crypto Tool</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">A secure, browser-based tool for key generation, encryption, and decryption.</p>
+            
+            <!-- Theme Toggle -->
+            <div class="absolute top-0 right-0">
+                <label for="theme-toggle" class="flex items-center cursor-pointer">
+                    <div class="relative">
+                        <input type="checkbox" id="theme-toggle" class="sr-only">
+                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                    </div>
+                </label>
+            </div>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+            <nav class="flex -mb-px" aria-label="Tabs">
+                <button class="tab-button active text-lg font-semibold py-4 px-6 text-gray-600 dark:text-gray-300" data-tab="protector">1. Protector</button>
+                <button class="tab-button text-lg font-semibold py-4 px-6 text-gray-600 dark:text-gray-300" data-tab="encryptor">2. Encryptor</button>
+                <button class="tab-button text-lg font-semibold py-4 px-6 text-gray-600 dark:text-gray-300" data-tab="decryptor">3. Decryptor</button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <main>
+            <!-- Protector Section -->
+            <div id="protector" class="tab-content card space-y-6">
+                <h2 class="text-2xl font-bold text-gray-700 dark:text-gray-200">Generate & Protect Keys</h2>
+                <div class="password-box">
+                    <label for="protector-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password for Private Key</label>
+                    <input type="password" id="protector-password" class="form-input pr-10" placeholder="Enter a strong password">
+                    <button class="visibility-btn" data-target="protector-password">
+                        <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <svg class="eye-closed hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L6.228 6.228" /></svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="protector-algo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Encryption Algorithm</label>
+                        <select id="protector-algo" class="form-select">
+                            <option value="AES-GCM" selected>PBKDF2 + AES-GCM (Recommended)</option>
+                            <option value="AES-CBC">PBKDF2 + AES-CBC</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="protector-separator" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Separator String</label>
+                        <input type="text" id="protector-separator" class="form-input">
+                    </div>
+                </div>
+                <button id="generate-keys-btn" class="btn btn-primary w-full md:w-auto">Generate Keys</button>
+                <div id="protector-output" class="hidden space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="output-box">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Public Key (Base64)</label>
+                        <textarea id="public-key-output" readonly class="form-textarea font-mono text-sm"></textarea>
+                        <button class="copy-btn" data-target="public-key-output">Copy</button>
+                    </div>
+                    <div class="output-box">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Encrypted Private Key (Base64)</label>
+                        <textarea id="private-key-output" readonly class="form-textarea font-mono text-sm"></textarea>
+                        <button class="copy-btn" data-target="private-key-output">Copy</button>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                         <button id="populate-encryptor-btn" class="btn btn-secondary">Populate Encryptor</button>
+                         <button id="copy-plaintext-pk-btn" class="btn btn-secondary bg-yellow-600 hover:bg-yellow-700">Copy Unencrypted Private Key</button>
+                    </div>
+                    <p class="text-xs text-yellow-600 dark:text-yellow-400">Warning: The unencrypted private key provides full access. Handle with extreme care.</p>
+                </div>
+                <div id="protector-status" class="text-red-500 text-sm mt-2"></div>
+            </div>
+
+            <!-- Encryptor Section -->
+            <div id="encryptor" class="tab-content card space-y-6 hidden">
+                 <h2 class="text-2xl font-bold text-gray-700 dark:text-gray-200">Encrypt Data</h2>
+                <div>
+                    <label for="encryptor-plaintext" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Text to Encrypt</label>
+                    <textarea id="encryptor-plaintext" class="form-textarea" placeholder="Enter the text you want to encrypt..."></textarea>
+                </div>
+                <div>
+                    <label for="encryptor-public-key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">RSA Public Key (Base64)</label>
+                    <textarea id="encryptor-public-key" class="form-textarea font-mono text-sm" placeholder="Paste the public key here..."></textarea>
+                </div>
+                <div>
+                    <label for="encryptor-private-key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Encrypted Private Key (Base64)</label>
+                    <textarea id="encryptor-private-key" class="form-textarea font-mono text-sm" placeholder="Paste the encrypted private key here..."></textarea>
+                </div>
+                <div>
+                    <label for="encryptor-separator" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Separator</label>
+                    <input type="text" id="encryptor-separator" class="form-input" placeholder="Enter the separator string...">
+                </div>
+                <button id="encrypt-btn" class="btn btn-primary w-full md:w-auto">Encrypt & Package</button>
+                <div id="encryptor-output" class="hidden space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                     <div class="output-box">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Packaged Encrypted Data</label>
+                        <textarea id="encrypted-output" readonly class="form-textarea font-mono text-sm"></textarea>
+                        <button class="copy-btn" data-target="encrypted-output">Copy</button>
+                    </div>
+                    <button id="populate-decryptor-btn" class="btn btn-secondary">Populate Decryptor</button>
+                </div>
+                <div id="encryptor-status" class="text-red-500 text-sm mt-2"></div>
+            </div>
+
+            <!-- Decryptor Section -->
+            <div id="decryptor" class="tab-content card space-y-6 hidden">
+                <h2 class="text-2xl font-bold text-gray-700 dark:text-gray-200">Decrypt Data</h2>
+                <div>
+                    <label for="decryptor-packaged-data" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Packaged Encrypted Data</p>
+                    <textarea id="decryptor-packaged-data" class="form-textarea font-mono text-sm" placeholder="Paste the combined encrypted string here..."></textarea>
+                </div>
+                <div>
+                    <label for="decryptor-algo" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Encryption Algorithm Used</label>
+                    <select id="decryptor-algo" class="form-select">
+                        <option value="AES-GCM" selected>PBKDF2 + AES-GCM</option>
+                        <option value="AES-CBC">PBKDF2 + AES-CBC</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="decryptor-separator" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Separator</label>
+                    <input type="text" id="decryptor-separator" class="form-input" placeholder="Enter the separator string...">
+                </div>
+                <div class="password-box">
+                    <label for="decryptor-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                    <input type="password" id="decryptor-password" class="form-input pr-10" placeholder="Enter the password used for encryption">
+                    <button class="visibility-btn" data-target="decryptor-password">
+                        <svg class="eye-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <svg class="eye-closed hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L6.228 6.228" /></svg>
+                    </button>
+                </div>
+                <button id="decrypt-btn" class="btn btn-primary w-full md:w-auto">Decrypt</button>
+                <div id="decryptor-output" class="hidden space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                     <div class="output-box">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Decrypted Original Text</label>
+                        <textarea id="decrypted-output" readonly class="form-textarea"></textarea>
+                        <button class="copy-btn" data-target="decrypted-output">Copy</button>
+                    </div>
+                </div>
+                <div id="decryptor-status" class="text-red-500 text-sm mt-2"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- State ---
+            let plaintextPrivateKey; // Store unencrypted private key temporarily
+
+            // --- DOM Elements ---
+            const themeToggle = document.getElementById('theme-toggle');
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const visibilityBtns = document.querySelectorAll('.visibility-btn');
+
+            // Protector
+            const protectorPasswordEl = document.getElementById('protector-password');
+            const protectorAlgoEl = document.getElementById('protector-algo');
+            const protectorSeparatorEl = document.getElementById('protector-separator');
+            const generateKeysBtn = document.getElementById('generate-keys-btn');
+            const publicKeyOutputEl = document.getElementById('public-key-output');
+            const privateKeyOutputEl = document.getElementById('private-key-output');
+            const protectorOutputEl = document.getElementById('protector-output');
+            const protectorStatusEl = document.getElementById('protector-status');
+            const populateEncryptorBtn = document.getElementById('populate-encryptor-btn');
+            const copyPlaintextPkBtn = document.getElementById('copy-plaintext-pk-btn');
+
+            // Encryptor
+            const encryptorPlaintextEl = document.getElementById('encryptor-plaintext');
+            const encryptorPublicKeyEl = document.getElementById('encryptor-public-key');
+            const encryptorPrivateKeyEl = document.getElementById('encryptor-private-key');
+            const encryptorSeparatorEl = document.getElementById('encryptor-separator');
+            const encryptBtn = document.getElementById('encrypt-btn');
+            const encryptedOutputEl = document.getElementById('encrypted-output');
+            const encryptorOutputEl = document.getElementById('encryptor-output');
+            const encryptorStatusEl = document.getElementById('encryptor-status');
+            const populateDecryptorBtn = document.getElementById('populate-decryptor-btn');
+
+            // Decryptor
+            const decryptorPackagedDataEl = document.getElementById('decryptor-packaged-data');
+            const decryptorSeparatorEl = document.getElementById('decryptor-separator');
+            const decryptorPasswordEl = document.getElementById('decryptor-password');
+            const decryptorAlgoEl = document.getElementById('decryptor-algo');
+            const decryptBtn = document.getElementById('decrypt-btn');
+            const decryptedOutputEl = document.getElementById('decrypted-output');
+            const decryptorOutputEl = document.getElementById('decryptor-output');
+            const decryptorStatusEl = document.getElementById('decryptor-status');
+
+            // --- Helper Functions ---
+            const arrayBufferToBase64 = (buffer) => btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)));
+            const base64ToArrayBuffer = (base64) => Uint8Array.from(atob(base64), c => c.charCodeAt(0)).buffer;
+            
+            const generateRandomString = (length) => {
+                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let result = '';
+                const randomValues = new Uint32Array(length);
+                window.crypto.getRandomValues(randomValues);
+                for (let i = 0; i < length; i++) result += chars[randomValues[i] % chars.length];
+                return result;
+            };
+            
+            let originalButtonContent = {};
+            const setButtonLoadingState = (button, isLoading) => {
+                if (isLoading) {
+                    originalButtonContent[button.id] = button.innerHTML;
+                    button.disabled = true;
+                    button.innerHTML = `<div class="spinner"></div>`;
+                } else {
+                    button.disabled = false;
+                    button.innerHTML = originalButtonContent[button.id] || '';
+                }
+            };
+
+            // --- Initial Setup ---
+            protectorSeparatorEl.value = generateRandomString(6);
+
+            // --- Theme Toggler ---
+            const updateThemeToggle = (isDark) => {
+                themeToggle.checked = isDark;
+                const dot = themeToggle.nextElementSibling.nextElementSibling;
+                if (isDark) dot.style.transform = 'translateX(100%)';
+                else dot.style.transform = 'translateX(0)';
+            };
+            
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                updateThemeToggle(true);
+            }
+
+            themeToggle.addEventListener('change', () => {
+                if (themeToggle.checked) {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                    updateThemeToggle(true);
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                    updateThemeToggle(false);
+                }
+            });
+
+            // --- UI Logic (Tabs, Copy, Visibility) ---
+            tabs.forEach(tab => tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                tabContents.forEach(content => content.classList.add('hidden'));
+                document.getElementById(tab.dataset.tab).classList.remove('hidden');
+            }));
+            
+            visibilityBtns.forEach(btn => btn.addEventListener('click', () => {
+                const targetId = btn.dataset.target;
+                const targetInput = document.getElementById(targetId);
+                const isPassword = targetInput.type === 'password';
+                targetInput.type = isPassword ? 'text' : 'password';
+                btn.querySelector('.eye-open').classList.toggle('hidden', isPassword);
+                btn.querySelector('.eye-closed').classList.toggle('hidden', !isPassword);
+            }));
+
+            document.body.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('.copy-btn');
+                if (copyBtn) {
+                    const targetId = copyBtn.dataset.target;
+                    const targetEl = document.getElementById(targetId);
+                    navigator.clipboard.writeText(targetEl.value).then(() => {
+                        const originalText = copyBtn.textContent;
+                        copyBtn.textContent = 'Copied!';
+                        setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
+                    });
+                }
+            });
+
+            // --- Protector Logic ---
+            generateKeysBtn.addEventListener('click', async () => {
+                const password = protectorPasswordEl.value;
+                const algo = protectorAlgoEl.value;
+                if (!password) {
+                    protectorStatusEl.textContent = 'Password is required to protect the private key.';
+                    return;
+                }
+                protectorStatusEl.textContent = '';
+                setButtonLoadingState(generateKeysBtn, true);
+                plaintextPrivateKey = null; // Clear previous key
+
+                try {
+                    const keyPair = await crypto.subtle.generateKey({ name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['encrypt', 'decrypt']);
+                    const publicKey = await crypto.subtle.exportKey('spki', keyPair.publicKey);
+                    const privateKey = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+                    
+                    plaintextPrivateKey = privateKey; // Store for the copy button
+                    publicKeyOutputEl.value = arrayBufferToBase64(publicKey);
+
+                    const salt = crypto.getRandomValues(new Uint8Array(16));
+                    const passwordKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                    const aesKey = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, passwordKey, { name: algo, length: 256 }, true, ['encrypt', 'decrypt']);
+
+                    const iv = crypto.getRandomValues(new Uint8Array(algo === 'AES-GCM' ? 12 : 16));
+                    const encryptedPrivateKey = await crypto.subtle.encrypt({ name: algo, iv }, aesKey, privateKey);
+
+                    const packagedPrivateKey = new Uint8Array(salt.length + iv.length + encryptedPrivateKey.byteLength);
+                    packagedPrivateKey.set(salt, 0);
+                    packagedPrivateKey.set(iv, salt.length);
+                    packagedPrivateKey.set(new Uint8Array(encryptedPrivateKey), salt.length + iv.length);
+
+                    privateKeyOutputEl.value = arrayBufferToBase64(packagedPrivateKey.buffer);
+                    protectorOutputEl.classList.remove('hidden');
+                } catch (error) {
+                    protectorStatusEl.textContent = `Error: ${error.message}`;
+                    console.error(error);
+                } finally {
+                    setButtonLoadingState(generateKeysBtn, false);
+                }
+            });
+            
+            copyPlaintextPkBtn.addEventListener('click', () => {
+                if (plaintextPrivateKey) {
+                    navigator.clipboard.writeText(arrayBufferToBase64(plaintextPrivateKey)).then(() => {
+                        const originalText = copyPlaintextPkBtn.textContent;
+                        copyPlaintextPkBtn.textContent = 'Copied!';
+                        setTimeout(() => { copyPlaintextPkBtn.textContent = originalText; }, 2000);
+                    });
+                } else {
+                    protectorStatusEl.textContent = 'Generate a key first to copy the plaintext version.';
+                }
+            });
+
+            // --- Encryptor Logic ---
+            encryptBtn.addEventListener('click', async () => {
+                const plaintext = encryptorPlaintextEl.value;
+                const publicKeyB64 = encryptorPublicKeyEl.value;
+                const encryptedPrivateKeyB64 = encryptorPrivateKeyEl.value;
+                const separator = encryptorSeparatorEl.value;
+
+                if (!plaintext || !publicKeyB64 || !encryptedPrivateKeyB64 || !separator) {
+                    encryptorStatusEl.textContent = 'All fields are required.';
+                    return;
+                }
+                encryptorStatusEl.textContent = '';
+                setButtonLoadingState(encryptBtn, true);
+
+                try {
+                    const publicKeyBuffer = base64ToArrayBuffer(publicKeyB64);
+                    const publicKey = await crypto.subtle.importKey('spki', publicKeyBuffer, { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['encrypt']);
+                    const plaintextBuffer = new TextEncoder().encode(plaintext);
+                    const encryptedData = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, plaintextBuffer);
+                    const encryptedDataB64 = arrayBufferToBase64(encryptedData);
+                    encryptedOutputEl.value = `${encryptedDataB64}${separator}${encryptedPrivateKeyB64}`;
+                    encryptorOutputEl.classList.remove('hidden');
+                } catch (error) {
+                    encryptorStatusEl.textContent = `Error: ${error.message}. Ensure the public key is valid.`;
+                    console.error(error);
+                } finally {
+                    setButtonLoadingState(encryptBtn, false);
+                }
+            });
+
+            // --- Decryptor Logic ---
+            decryptBtn.addEventListener('click', async () => {
+                const packagedData = decryptorPackagedDataEl.value;
+                const separator = decryptorSeparatorEl.value;
+                const password = decryptorPasswordEl.value;
+                const algo = decryptorAlgoEl.value;
+
+                if (!packagedData || !separator || !password) {
+                    decryptorStatusEl.textContent = 'All fields are required.';
+                    return;
+                }
+                decryptorStatusEl.textContent = '';
+                setButtonLoadingState(decryptBtn, true);
+
+                try {
+                    const parts = packagedData.split(separator);
+                    if (parts.length !== 2) throw new Error('Invalid packaged data or separator.');
+                    const [encryptedDataB64, packagedPrivateKeyB64] = parts;
+
+                    const packagedPrivateKeyBuffer = base64ToArrayBuffer(packagedPrivateKeyB64);
+                    const ivLength = algo === 'AES-GCM' ? 12 : 16;
+                    const salt = packagedPrivateKeyBuffer.slice(0, 16);
+                    const iv = packagedPrivateKeyBuffer.slice(16, 16 + ivLength);
+                    const encryptedPrivateKey = packagedPrivateKeyBuffer.slice(16 + ivLength);
+
+                    const passwordKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
+                    const aesKey = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, passwordKey, { name: algo, length: 256 }, true, ['decrypt']);
+                    const privateKeyBuffer = await crypto.subtle.decrypt({ name: algo, iv }, aesKey, encryptedPrivateKey);
+                    const privateKey = await crypto.subtle.importKey('pkcs8', privateKeyBuffer, { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['decrypt']);
+
+                    const encryptedDataBuffer = base64ToArrayBuffer(encryptedDataB64);
+                    const decryptedDataBuffer = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, encryptedDataBuffer);
+                    decryptedOutputEl.value = new TextDecoder().decode(decryptedDataBuffer);
+                    decryptorOutputEl.classList.remove('hidden');
+                } catch (error) {
+                    decryptorStatusEl.textContent = `Error: ${error.message}. Check password, separator, algorithm, and input data.`;
+                    console.error(error);
+                } finally {
+                    setButtonLoadingState(decryptBtn, false);
+                }
+            });
+            
+            // --- Auto-population ---
+            populateEncryptorBtn.addEventListener('click', () => {
+                encryptorPublicKeyEl.value = publicKeyOutputEl.value;
+                encryptorPrivateKeyEl.value = privateKeyOutputEl.value;
+                encryptorSeparatorEl.value = protectorSeparatorEl.value;
+                document.querySelector('[data-tab="encryptor"]').click();
+            });
+
+            populateDecryptorBtn.addEventListener('click', () => {
+                decryptorPackagedDataEl.value = encryptedOutputEl.value;
+                decryptorSeparatorEl.value = encryptorSeparatorEl.value;
+                // Attempt to sync algorithm selection
+                const protectorAlgo = protectorAlgoEl.value;
+                if(protectorAlgo) decryptorAlgoEl.value = protectorAlgo;
+                document.querySelector('[data-tab="decryptor"]').click();
+            });
+        });
+    </script>
+</body>
+</html>
