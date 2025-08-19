@@ -488,7 +488,7 @@
                 }
             });
 
-            // --- Encryptor Logic ---
+            // --- Encryptor Logic (HYBRID ENCRYPTION) ---
             encryptBtn.addEventListener('click', async () => {
                 const plaintext = encryptorPlaintextEl.value;
                 const publicKeyB64 = encryptorPublicKeyEl.value;
@@ -503,13 +503,32 @@
                 setButtonLoadingState(encryptBtn, true);
 
                 try {
+                    // 1. Generate a new symmetric key (AES-GCM) for the data
+                    const symmetricKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+                    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+                    // 2. Encrypt the actual data with the symmetric key
+                    const plaintextBuffer = new TextEncoder().encode(plaintext);
+                    const encryptedData = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, symmetricKey, plaintextBuffer);
+
+                    // 3. Encrypt the symmetric key with the RSA public key
                     const publicKeyBuffer = base64ToArrayBuffer(publicKeyB64);
                     const publicKey = await crypto.subtle.importKey('spki', publicKeyBuffer, { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['encrypt']);
-                    const plaintextBuffer = new TextEncoder().encode(plaintext);
-                    const encryptedData = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, plaintextBuffer);
+                    const rawSymmetricKey = await crypto.subtle.exportKey('raw', symmetricKey);
+                    const encryptedSymmetricKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, rawSymmetricKey);
+
+                    // 4. Package the encrypted symmetric key, iv, and encrypted data together
+                    const encryptedSymmetricKeyB64 = arrayBufferToBase64(encryptedSymmetricKey);
+                    const ivB64 = arrayBufferToBase64(iv);
                     const encryptedDataB64 = arrayBufferToBase64(encryptedData);
-                    encryptedOutputEl.value = `${encryptedDataB64}${separator}${encryptedPrivateKeyB64}`;
+                    
+                    // Use a colon as an internal separator for the data package
+                    const dataPackage = `${encryptedSymmetricKeyB64}:${ivB64}:${encryptedDataB64}`;
+
+                    // 5. Combine with the main separator and the encrypted private key
+                    encryptedOutputEl.value = `${dataPackage}${separator}${encryptedPrivateKeyB64}`;
                     encryptorOutputEl.classList.remove('hidden');
+
                 } catch (error) {
                     encryptorStatusEl.textContent = `Error: ${error.message}. Ensure the public key is valid.`;
                     console.error(error);
@@ -518,7 +537,7 @@
                 }
             });
 
-            // --- Decryptor Logic ---
+            // --- Decryptor Logic (HYBRID DECRYPTION) ---
             decryptBtn.addEventListener('click', async () => {
                 const packagedData = decryptorPackagedDataEl.value;
                 const separator = decryptorSeparatorEl.value;
@@ -533,23 +552,38 @@
                 setButtonLoadingState(decryptBtn, true);
 
                 try {
-                    const parts = packagedData.split(separator);
-                    if (parts.length !== 2) throw new Error('Invalid packaged data or separator.');
-                    const [encryptedDataB64, packagedPrivateKeyB64] = parts;
+                    // 1. Split the main package to get the data package and the encrypted private key
+                    const mainParts = packagedData.split(separator);
+                    if (mainParts.length !== 2) throw new Error('Invalid packaged data or main separator.');
+                    const [dataPackage, packagedPrivateKeyB64] = mainParts;
 
+                    // 2. Decrypt the RSA private key first (same as before)
                     const packagedPrivateKeyBuffer = base64ToArrayBuffer(packagedPrivateKeyB64);
                     const ivLength = algo === 'AES-GCM' ? 12 : 16;
                     const salt = packagedPrivateKeyBuffer.slice(0, 16);
-                    const iv = packagedPrivateKeyBuffer.slice(16, 16 + ivLength);
+                    const privateKeyIv = packagedPrivateKeyBuffer.slice(16, 16 + ivLength);
                     const encryptedPrivateKey = packagedPrivateKeyBuffer.slice(16 + ivLength);
 
                     const passwordKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), { name: 'PBKDF2' }, false, ['deriveKey']);
-                    const aesKey = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, passwordKey, { name: algo, length: 256 }, true, ['decrypt']);
-                    const privateKeyBuffer = await crypto.subtle.decrypt({ name: algo, iv }, aesKey, encryptedPrivateKey);
+                    const aesKeyForPrivateKey = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, passwordKey, { name: algo, length: 256 }, true, ['decrypt']);
+                    const privateKeyBuffer = await crypto.subtle.decrypt({ name: algo, iv: privateKeyIv }, aesKeyForPrivateKey, encryptedPrivateKey);
                     const privateKey = await crypto.subtle.importKey('pkcs8', privateKeyBuffer, { name: 'RSA-OAEP', hash: 'SHA-256' }, true, ['decrypt']);
 
+                    // 3. Split the data package into its components
+                    const dataParts = dataPackage.split(':');
+                    if (dataParts.length !== 3) throw new Error('Invalid data package format.');
+                    const [encryptedSymmetricKeyB64, ivB64, encryptedDataB64] = dataParts;
+
+                    // 4. Use the decrypted RSA private key to decrypt the symmetric key
+                    const encryptedSymmetricKeyBuffer = base64ToArrayBuffer(encryptedSymmetricKeyB64);
+                    const rawSymmetricKey = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, encryptedSymmetricKeyBuffer);
+                    const symmetricKey = await crypto.subtle.importKey('raw', rawSymmetricKey, { name: 'AES-GCM' }, true, ['decrypt']);
+
+                    // 5. Use the decrypted symmetric key and IV to decrypt the final data
                     const encryptedDataBuffer = base64ToArrayBuffer(encryptedDataB64);
-                    const decryptedDataBuffer = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, encryptedDataBuffer);
+                    const iv = base64ToArrayBuffer(ivB64);
+                    const decryptedDataBuffer = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, symmetricKey, encryptedDataBuffer);
+                    
                     decryptedOutputEl.value = new TextDecoder().decode(decryptedDataBuffer);
                     decryptorOutputEl.classList.remove('hidden');
                 } catch (error) {
